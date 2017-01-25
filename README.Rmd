@@ -3,4 +3,4 @@
 
 This repo contain my course material and diary for the Open Data Sciense 2017 MOOC
 
-Here's a [link](https://github.com/riturkki/IODS-project) to my IODS-project diary
+Here's a [link](https://riturkki.github.io/IODS-project/) to my IODS-project diary
