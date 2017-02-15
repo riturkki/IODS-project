@@ -1,0 +1,10 @@
+---
+title: "chapter 3"
+author: "Riku Turkki"
+date: "2/15/2017"
+output: html_document
+---
+
+# Logistic regression
+
+Haven't done this excercise ):

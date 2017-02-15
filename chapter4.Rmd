@@ -1,0 +1,229 @@
+---
+title: "chapter4"
+author: "Riku Turkki"
+date: "2/15/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Clustering and classification
+
+The topics of this chapter - clustering and classification - are handy and visual tools of exploring statistical data. Clustering means that some points (or observations) of the data are in some sense closer to each other than some other points. In other words, the data points do not comprise a homogeneous sample, but instead, it is somehow clustered.
+
+In general, the clustering methods try to find these clusters (or groups) from the data. One of the most typical clustering methods is called k-means clustering. Also hierarchical clustering methods quite popular, giving tree-like dendrograms as their main output.
+
+As such, clusters are easy to find, but what might be the "right" number of clusters? It is not always clear. And how to give these clusters names and interpretations?
+
+Based on a successful clustering, we may try to classify new observations to these clusters and hence validate the results of clustering. Another way is to use various forms of discriminant analysis, which operates with the (now) known clusters, asking: "what makes the difference(s) between these groups (clusters)?"
+
+In the connection of these methods, we also discuss the topic of distance (or dissimilarity or similarity) measures. There are lots of other measures than just the ordinary Euclidean distance, although it is one of the most important ones. Several discrete and even binary measures exist and are widely used for different purposes in various disciplines.
+
+## Point 2
+
+```{r point 2}
+set.seed(42)
+library(MASS)
+data(Boston)
+
+head(Boston)
+str(Boston)
+dim(Boston)
+
+```
+
+### Comments on point 2 
+
+The dataset contains 506 obersvations and 14 variables describing crime statistic in Boston area. Description of dataset variables ca be found from [here](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html)
+
+
+## Point 3
+
+```{r point 3}
+library(GGally)
+library(ggplot2)
+
+pm <- ggpairs(data = Boston,
+              lower = list(continuous = wrap("points", size = .1)),
+              upper = list(continuous = wrap("cor", size = 1)))
+pm <- pm + theme_classic(base_size = 5)
+pm
+
+summary(Boston)
+
+```
+
+### Comments on point 3
+
+Based on the scatter plot it seems that variables *rm* and *lstat* have a moderate anticorrelation (r = -0.614) whereas *rm* and *medv* seems to have positive correlation (r = 0.695). In addition, variable *indus* seems to have rather strong correlation with *tax* and *nox* (r = 0.721 and r = 0.764 respectively). dis
+weighted mean of distances to five Boston employment centres.
+
+*nox*   = nitrogen oxides concentration (parts per 10 million).
+
+*rm*    = average number of rooms per dwelling.
+
+*tax*   = full-value property-tax rate per \$10,000.
+
+*lstat* = lower status of the population (percent).
+
+*medv*  = median value of owner-occupied homes in \$1000s.
+
+## Point 4
+
+```{r point 4}
+sBoston = as.data.frame(scale(Boston))
+
+pms <- ggpairs(data = sBoston,
+              lower = list(continuous = wrap("points", size = .1)),
+              upper = list(continuous = wrap("cor", size = 1)))
+pms <- pms + theme_classic(base_size = 5)
+pms
+
+summary(sBoston)
+```
+
+### Comments on point 4
+
+As can be seen from the plot above scaling the data frame obviously preseves the shape and distribution, however, the mean values are now set to zero and standard deviation to 1.
+
+
+```{r point 4 contd}
+library(dplyr)
+
+bins <- quantile(sBoston$crim)
+new_crim <- cut(sBoston$crim, breaks = bins, include.lowest = TRUE, 
+                label = c("low","med_low","med_high","high"))
+
+sBoston <- dplyr::select(sBoston, -crim)
+sBoston <- data.frame(sBoston, new_crim)
+
+n <- nrow(sBoston)
+ind <- sample(n,  size = n * 0.8)
+train <- sBoston[ind,]
+test <- sBoston[-ind,]
+
+```
+
+## Point 5
+
+```{r point 5}
+
+lda.fit <- lda(new_crim ~ ., data = train)
+plot(lda.fit, dimen = 2,col = as.numeric(new_crim))
+
+
+```
+
+## Point 6
+
+```{r point 6}
+
+groud_truth <- test$new_crim
+test <- dplyr::select(test, -new_crim)
+lda.pred <- predict(lda.fit, newdata = test)
+cm <- table(correct = groud_truth, predicted = lda.pred$class)
+print(cm)
+
+library(caret)
+confusionMatrix(cm) 
+
+```
+
+### Comments on point 6
+
+On overall, the classification with LDA seems to be working quite nicely. Classification accuracy is 0.765 (95% CI 0.6704, 0.8431) and Kappa value of 0.68 indicates substantial agreement.
+
+## Point 7
+
+```{r point 7}
+data(Boston)
+Boston <- as.data.frame(scale(Boston))
+dm = dist(Boston)
+twcss <- sapply(1:10, function(k){kmeans(dm, k)$tot.withinss})
+plot(twcss, type = 'b')
+
+```
+
+### Comments on point 7 
+
+Based on the plot above k=2 is the optimal number of clusters.
+
+```{r point 7 contd.}
+km1 = kmeans(dm, 2)
+cluster <- as.factor(km1$cluster)
+Boston <- data.frame(Boston, cluster)
+pm <- ggpairs(data = Boston,
+              columns = 1:14,
+              mapping = aes(col = cluster),
+              lower = list(continuous = wrap("points", size = .1)),
+              upper = list(continuous = wrap("cor", size = 1)))
+pm <- pm + theme_classic(base_size = 5)
+pm
+
+
+```
+
+
+### Comments on point 7 contd.
+
+Most obvious discriminating variables, bases on the plot above, are at least *zn*, *nox*, and *tax*. Blue group indicates cases where crime rates are higher and in red group the crime rates seems to be usually lower. 
+
+
+## Bonus
+
+
+```{r}
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "black", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+data(Boston)
+Boston <- as.data.frame(scale(Boston))
+dm = dist(Boston)
+km2 = kmeans(dm, 4)
+cluster <- as.factor(km2$cluster)
+lda.fit2 <- lda(cluster ~ ., data = Boston)
+plot(lda.fit2, dimen = 2,col = as.numeric(cluster))
+lda.arrows(lda.fit2, myscale = 2)
+
+```
+
+
+### Comments on Bonus
+
+Strongest predictor variables are *nox*, *tax*, *zn*, and *medv*
+
+## Super-Bonus
+
+```{r}
+library(plotly)
+model_predictors <- dplyr::select(train, -new_crim)
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = train$new_crim)
+```
+
+
+```{r}
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = cluster[ind])
+
+```
+
+### Comments on super-bonus
+
+Clustering (k=4) is not a perfect match with the real crime categories but is resembels it remarcably well.
+
+

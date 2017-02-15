@@ -1,7 +1,11 @@
-# Insert chapter 2 title here
+---
+title: "chapter 2"
+author: "Riku Turkki"
+date: "2/15/2017"
+output: html_document
+---
 
-*Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+# Regression and model validation
+
+Haven't done this excercise :(
