@@ -1,0 +1,137 @@
+---
+title: "Chapter5"
+author: "Riku Turkki"
+date: "2/23/2017"
+output: html_document
+---
+
+# Dimensionality reduction techniques — Data wrangling
+
+```{r data wrangling}
+library(stringr)
+library(dplyr)
+library(data.table)
+
+
+human <- read.table("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human1.txt", sep  =",", header = T)
+human$GNI <- str_replace(human$GNI, pattern = ",", replacement = "") %>% as.numeric()
+keep <- c( "Country", "Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp", "GNI", "Mat.Mor", "Ado.Birth", "Parli.F")
+human <- select(human, one_of(keep))
+human <- filter(human, complete.cases(human))
+human <- human[1:155,] 
+rownames(human) <- human$Country
+human <- select(human, -Country)
+save(human, file = "human.Rda")
+rm(list=ls())
+```
+
+# Dimensionality reduction techniques — Analysis
+
+## point 1
+
+```{r}
+human <- read.table("~/Documents/github/IODS-project/human.txt", sep  =" ", header = T)
+str(human)
+
+```
+
+The dataset *human* contains information regarding health, education, and govermental status collected from 155 countries. Short variable descriptions:
+
+*Edu2.FM*: People with secondary education (female / male)
+
+*Labo.FM*: Labour force participation rate (female / male)
+
+*Edu.Exp*: Expected years of education
+
+*Life.Exp*: Life expectancy at birth
+
+*GNI*: Gross national income per capita
+
+*Mat.Mor*: Maternal mortality ratio
+
+*Ado.Birth*: Adolecent birth rate
+
+*Parli.F*: Percent representation in parliament
+
+For more detailed information please see: http://hdr.undp.org/sites/default/files/hdr2015_technical_notes.pdf
+
+
+## point 2
+
+```{r}
+library(GGally)
+library(ggplot2)
+
+pm <- ggpairs(data = human,
+              lower = list(continuous = wrap("points", size = .1)),
+              upper = list(continuous = wrap("cor", size = 3)))
+pm <- pm + theme_classic(base_size = 6)
+pm
+
+```
+
+
+ Brief comments on the data based on the plot above. 
+ 
+ * Life expectancy has a strong correlations with education and strong negative correlation with maternal mortality and adolecent birth rate.
+ * Similarly GNI seem to correlate well with education and life expectancy.
+ *Adolecent birth rate and maternal mortality are stronly linked.
+ * Interestingly percent precentation parliment doesn't seem to correlate strongly with any of the variables.
+
+## point 3
+
+```{r}
+pca_human <- prcomp(human)
+biplot(pca_human, choices = 1:2, cex = c(0.5, 0.5), col = c("grey70", "black"))
+
+```
+
+Without scaling the above PCA biplot is dominated solely by GNI due to it's large absolut values and variance. 
+
+
+## point 4
+
+```{r}
+human_norm <- scale(human)
+pca_human_norm <- prcomp(human_norm)
+biplot(pca_human_norm, choices = 1:2, cex = c(0.5, 0.5), col = c("grey70", "black"))
+
+```
+
+
+After normalizing the variables the underlying effect of individual variables can be seen from the biplot above more clearly.
+
+## point 5
+
+The first PC seems to capture nicely a transition between countries that have high life expectancy, high expected time of education, high women education, high GNI and low maternal mortality and low adolecent birth rate  to those with opposite values. The second PC seems to aling with percent representation in parliament and labour force participation rate (female / male). As a note Nordic countries cluster to top-left corner indicating high value in both PC1 and PC2.
+
+
+## point 6
+
+
+```{r}
+rm(list = ls())
+library(FactoMineR)
+library(tidyr)
+data(tea)
+str(tea)
+dim(tea)
+summary(tea)
+keep = c("home", "evening", "breakfast", "sugar", "sex", "healthy")
+tea <- select(tea, one_of(keep))
+gather(tea) %>% ggplot(aes(value)) + geom_bar() + facet_wrap("key", scales = "free") + theme_classic(base_size = 12) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+```
+
+
+```{r}
+mca <- MCA(tea, graph = FALSE)
+summary(mca)
+plot(mca, invisible=c("ind"), habillage = "quali")
+```
+
+Comments on MCA analysis: 
+* Based on the plot above it seems that males are drinking their tea with sugar more often than females. 
+* For some reason variable *Not Home* is clearly separate from other variables (maybe because there's only really few of those that are not drinking tea at home).
+* Another interesting note from the plot is that those who are healthy tend to drink tea more often during breakfast whereas those who are not healthy drink more often during evenings.
+
